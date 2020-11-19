@@ -1,0 +1,14 @@
+version: '3.7'
+
+services:
+  app:
+    command: tail -f /dev/null
+    image: golang:latest
+    environment:
+      # All of your dependencies will be found right here under /code/.go/pkg/mod
+      - GOPATH=/code/.go
+    ports:
+      - 8000:8000
+    volumes:
+      - ./:/code:cached
+    working_dir: /code
