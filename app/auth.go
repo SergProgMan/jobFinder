@@ -1,9 +1,14 @@
 package app
 
 import (
+	"context"
+	"fmt"
 	u "lens/utils"
 	"net/http"
+	"os"
 	"strings"
+
+	"github.com/dgrijalva/jwt-go"
 )
 
 var JwtAuthentication = func(next http.Handler) http.Handler {
@@ -38,5 +43,34 @@ var JwtAuthentication = func(next http.Handler) http.Handler {
 			u.Respond(w, response)
 			return
 		}
+
+		tokenPart := splitted[1]
+		tk := &models.Token{}
+
+		token, err := jwt.ParseWithClaims(tokenPart, tk, func(token *jwt.Token) (interface{}, error) {
+			return []byte(os.Getenv("token_password")), nil
+		})
+
+		if err != nil {
+			response = u.Message(false, "Malformed authentication token")
+			w.WriteHeader(http.StatusForbidden)
+			w.Header().Add("Content-Type", "application/json")
+			u.Respond(w, response)
+			return
+		}
+
+		//invalid token
+		if !token.Valid {
+			response = u.Message(false, "Token is not valid.")
+			w.WriteHeader(http.StatusForbidden)
+			w.Header().Add("Content-Type", "application/json")
+			u.Respond(w, response)
+			return
+		}
+
+		fmt.Sprintf("User %", tk.Username) //for monitoring
+		ctx := context.WithValue(r.Context(), "user", tk.UserId)
+		r = r.WithContext(ctx)
+		next.ServeHTTP(w,r) //go to the next worker
 	})
 }
